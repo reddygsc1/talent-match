@@ -232,6 +232,7 @@ class Result(BaseModel):
     evaluation: Evaluation
     verdict: Verdict
     points: int | None
+    suggestion: str = ""
 
 
 class Summary(BaseModel):

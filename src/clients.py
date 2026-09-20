@@ -5,7 +5,7 @@ from typing import Any
 import httpx
 from pydantic import ValidationError
 
-from .models import Evaluation, Evidence, Requirement
+from .models import Evaluation, Evidence, Requirement, Result
 
 
 class APIError(RuntimeError):
@@ -33,6 +33,25 @@ RUBRIC_SCHEMA = {
         }
     },
     "required": ["requirements"], "additionalProperties": False,
+}
+
+SUGGESTION_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "suggestions": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "requirement_id": {"type": "string"},
+                    "suggestion": {"type": "string"},
+                },
+                "required": ["requirement_id", "suggestion"],
+                "additionalProperties": False,
+            },
+        }
+    },
+    "required": ["suggestions"], "additionalProperties": False,
 }
 
 EVALUATION_SCHEMA = {
@@ -141,6 +160,33 @@ Set raw to {}. Do not use protected personal information."""
         user = f"RUBRIC:\n{json.dumps(rubric)}\n\nRESUME:\n{resume[:60000]}"
         data = self.json_completion(system, user, EVALUATION_SCHEMA)
         return _validate_evaluations(data, resume, requirements)
+
+    def suggest_improvements(self, resume: str, results: list[Result]) -> dict[str, str]:
+        gaps = [{
+            "requirement_id": result.requirement.id,
+            "requirement": result.requirement.name,
+            "jd_wording": result.requirement.jd_excerpt,
+            "verdict": result.verdict,
+            "resume_evidence": result.evaluation.evidence.quote,
+            "gap": result.evaluation.gap,
+        } for result in results if result.verdict != "Match"]
+        if not gaps:
+            return {}
+        system = """Suggest concise, actionable improvements for a candidate's resume against job
+requirements. Return one suggestion for every supplied requirement_id. Never advise fabricating experience.
+If experience may exist but is absent from the resume, say to add specific truthful evidence and measurable
+outcomes. If experience is genuinely missing, suggest a concrete learning, project, or experience-building
+step. Do not reference protected personal traits. Return JSON only."""
+        data = self.json_completion(
+            system,
+            f"GAPS:\n{json.dumps(gaps)}\n\nRESUME:\n{resume[:60000]}",
+            SUGGESTION_SCHEMA,
+        )
+        items = data.get("suggestions", [])
+        return {
+            str(item.get("requirement_id")): str(item.get("suggestion", "")).strip()
+            for item in items if isinstance(item, dict) and item.get("suggestion")
+        }
 
     def extract_evidence(self, resume: str, requirements: list[Requirement], values: dict[str, Any]) -> list[Evaluation]:
         rubric = [r.model_dump() for r in requirements]

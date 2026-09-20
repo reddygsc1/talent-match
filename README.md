@@ -6,7 +6,7 @@ A human-in-the-loop MVP that compares one resume with one job description and re
 - **Needs improvement — Gaps**
 - **No match**
 
-It shows an overall fit score, evidence coverage, exact resume evidence, and per-requirement gaps.
+It shows an overall fit score, evidence coverage, exact resume evidence, per-requirement gaps, and truthful improvement suggestions. Resumes, job descriptions, and screening history are stored locally for reuse.
 
 ## Important integration note
 
@@ -42,17 +42,22 @@ streamlit run app.py
 
 Open <http://localhost:8501>.
 
-You can also enter the OpenRouter key in the sidebar for the current session. Never commit `.env`.
+The OpenRouter key is read only from `.env`; it is never entered or displayed in the UI. Never commit `.env`. The model can still be changed from the sidebar.
 
 ## Workflow
 
-1. Paste a job description.
-2. Upload one PDF, DOCX, or TXT resume (or paste resume text).
-3. Generate and review the editable JSON rubric.
-4. Compare the resume.
-5. Review every result and its supporting evidence.
+1. Choose a saved resume or upload/paste a new one.
+2. Choose a saved job or paste a new job description.
+3. Generate and edit the human-readable rubric table.
+4. Compare and save the screening.
+5. Review evidence, gaps, and improvement suggestions.
+6. Reopen prior results from History or manage stored data in Library.
 
 Scanned PDFs requiring OCR are not supported in this MVP.
+
+## Local storage
+
+SQLite data is stored at `data/talent_match.db` by default. Set `DATABASE_PATH` to change it. The database is ignored by Git. Deleting a resume or job from Library also deletes its linked screenings. Back up the database if you need durable retention. On ephemeral cloud hosting, use a persistent volume or managed database.
 
 ## Scoring
 

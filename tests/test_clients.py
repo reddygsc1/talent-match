@@ -1,4 +1,5 @@
 from src.clients import OpenRouterClient
+from src.models import Evaluation, Evidence, Requirement, Result
 
 
 class StubOpenRouter(OpenRouterClient):
@@ -7,6 +8,18 @@ class StubOpenRouter(OpenRouterClient):
 
     def json_completion(self, system, user, schema=None):
         return self.response
+
+
+def test_improvement_suggestions_only_request_non_matches():
+    req = Requirement(id="python", name="Python", jd_excerpt="Python", type="noul",
+        instructions="Python shown?", target=True)
+    result = Result(requirement=req, evaluation=Evaluation(requirement_id="python",
+        evidence=Evidence(status="missing"), gap="Not shown"),
+        verdict="Needs improvement — Gaps", points=None)
+    client = StubOpenRouter({"suggestions": [{"requirement_id": "python", "suggestion": "Add a truthful Python project example."}]})
+    assert client.suggest_improvements("Resume", [result]) == {
+        "python": "Add a truthful Python project example."
+    }
 
 
 def test_requirement_source_quote_is_verified_against_jd():

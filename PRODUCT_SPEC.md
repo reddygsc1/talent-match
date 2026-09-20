@@ -8,12 +8,14 @@ Compare one resume against one job description using an editable, job-related ru
 
 - One JD and one resume per run
 - PDF, DOCX, TXT, and pasted text input
-- AI-generated, user-editable rubric
+- Persistent reusable resumes, job descriptions, and screening history in SQLite
+- AI-generated, human-readable editable rubric table
 - Score, Noul, and Choice question support
 - Configurable JEV HTTP adapter
 - OpenRouter fallback, visibly labeled as not JEV
 - Exact evidence quotes, gaps, fit score, and evidence coverage
-- In-memory session state only
+- Truthful OpenRouter improvement suggestions for gaps and no-match outcomes
+- Local deletion controls for stored personal data
 
 ## Evaluation semantics
 
