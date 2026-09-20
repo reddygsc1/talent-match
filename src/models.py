@@ -75,6 +75,32 @@ class Evaluation(BaseModel):
     gap: str = ""
     raw: dict[str, Any] = Field(default_factory=dict)
 
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_model_variations(cls, data):
+        if not isinstance(data, dict):
+            return data
+        data = data.copy()
+        evidence = data.get("evidence")
+        if isinstance(evidence, str):
+            text = evidence.strip()
+            data["evidence"] = {
+                "quote": text or None,
+                "location": None,
+                "status": "sufficient" if text else "missing",
+            }
+        elif evidence is None:
+            data["evidence"] = {"status": "missing"}
+        raw = data.get("raw")
+        if isinstance(raw, str):
+            data["raw"] = {"model_output": raw}
+        elif raw is None:
+            data["raw"] = {}
+        confidence = data.get("confidence")
+        if isinstance(confidence, (int, float)) and 1 < confidence <= 100:
+            data["confidence"] = confidence / 100
+        return data
+
 
 class Result(BaseModel):
     requirement: Requirement

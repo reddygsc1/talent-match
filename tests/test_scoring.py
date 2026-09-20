@@ -17,6 +17,20 @@ def test_jev_base_url_gets_system_one_path():
     assert JevClient._system_one_url("https://api.typesafe.ai/v1/systemone") == "https://api.typesafe.ai/v1/systemone"
 
 
+def test_evaluation_string_fields_are_normalized():
+    evaluation = Evaluation.model_validate({
+        "requirement_id": "depth",
+        "value": 2,
+        "confidence": 85,
+        "evidence": "Built production APIs",
+        "raw": "Strong evidence",
+    })
+    assert evaluation.evidence.quote == "Built production APIs"
+    assert evaluation.evidence.status == "sufficient"
+    assert evaluation.raw == {"model_output": "Strong evidence"}
+    assert evaluation.confidence == .85
+
+
 def test_score_match():
     result = classify(req(), Evaluation(requirement_id="depth", value=2.4,
         evidence=Evidence(quote="built services", status="sufficient")))
