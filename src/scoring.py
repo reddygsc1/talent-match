@@ -7,34 +7,41 @@ def classify(requirement: Requirement, evaluation: Evaluation) -> Result:
         return Result(requirement=requirement, evaluation=evaluation,
                       verdict="Needs improvement — Gaps", points=None)
 
-    if requirement.type == "score":
-        target = float(requirement.target)
-        actual = float(value)
-        if actual >= target:
-            verdict, points = "Match", 100
-        elif actual >= max(0, target - 1):
-            verdict, points = "Needs improvement — Gaps", 50
+    try:
+        if requirement.type == "score":
+            target = float(requirement.target)
+            actual = float(value)
+            if actual >= target:
+                verdict, points = "Match", 100
+            elif actual >= max(0, target - 1):
+                verdict, points = "Needs improvement — Gaps", 50
+            else:
+                verdict, points = "No match", 0
+        elif requirement.type == "noul":
+            probability = float(value)
+            if not 0 <= probability <= 1:
+                raise ValueError("Noul probability is outside 0–1")
+            expected = bool(requirement.target)
+            agreement = probability if expected else 1 - probability
+            if agreement >= .75:
+                verdict, points = "Match", 100
+            elif agreement >= .35:
+                verdict, points = "Needs improvement — Gaps", 50
+            else:
+                verdict, points = "No match", 0
         else:
-            verdict, points = "No match", 0
-    elif requirement.type == "noul":
-        probability = float(value)
-        expected = bool(requirement.target)
-        agreement = probability if expected else 1 - probability
-        if agreement >= .75:
-            verdict, points = "Match", 100
-        elif agreement >= .35:
-            verdict, points = "Needs improvement — Gaps", 50
-        else:
-            verdict, points = "No match", 0
-    else:
-        accepted = requirement.target
-        accepted_values = accepted if isinstance(accepted, list) else [accepted]
-        if value in accepted_values:
-            verdict, points = "Match", 100
-        elif value in ("other", "unclear", "none"):
-            verdict, points = "Needs improvement — Gaps", 50
-        else:
-            verdict, points = "No match", 0
+            if value == requirement.target:
+                verdict, points = "Match", 100
+            elif value in ("other", "unclear", "none"):
+                verdict, points = "Needs improvement — Gaps", 50
+            else:
+                verdict, points = "No match", 0
+    except (TypeError, ValueError, OverflowError):
+        evaluation.value = None
+        evaluation.evidence.status = "missing"
+        evaluation.gap = evaluation.gap or "The evaluator returned an invalid value for this requirement."
+        return Result(requirement=requirement, evaluation=evaluation,
+                      verdict="Needs improvement — Gaps", points=None)
 
     if evidence == "partial" and verdict == "Match":
         verdict, points = "Needs improvement — Gaps", 50

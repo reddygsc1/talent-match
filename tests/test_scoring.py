@@ -59,6 +59,29 @@ def test_noul_is_probability_not_boolean():
     assert result.verdict == "Match"
 
 
+def test_string_encoded_score_and_noul_criteria_are_normalized():
+    score = Requirement(id="years", name="Experience", jd_excerpt="4+ years", type="score",
+        instructions="Rate experience",
+        criteria="0: None, 1: One year, 2: Two years, 3: Three years, 4: Four years",
+        target="4")
+    assert score.criteria == ["None", "One year", "Two years", "Three years", "Four years"]
+    assert score.target == 4
+    noul = Requirement(id="mentor", name="Mentoring", jd_excerpt="mentoring", type="noul",
+        instructions="Is mentoring demonstrated?",
+        criteria="true: Demonstrated, false: Not demonstrated", target=None)
+    assert noul.criteria == {"true": "Demonstrated", "false": "Not demonstrated"}
+    assert noul.target is True
+
+
+def test_score_with_more_than_ten_levels_is_safely_compacted():
+    criteria = ", ".join(f"{i}: Level {i}" for i in range(11))
+    requirement = Requirement(id="years", name="Experience", jd_excerpt="experience", type="score",
+        instructions="Rate experience", criteria=criteria, target="10")
+    assert len(requirement.criteria) == 10
+    assert requirement.criteria[-1] == "Level 10"
+    assert requirement.target == 9
+
+
 def test_score_criteria_object_is_normalized_to_ordered_list():
     requirement = Requirement(id="years", name="Experience", jd_excerpt="5 years",
         type="score", instructions="Rate experience", criteria={"2": "Senior", "0": "None", "1": "Some"},

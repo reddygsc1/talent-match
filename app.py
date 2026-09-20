@@ -1,18 +1,17 @@
 import json
+import logging
 import os
-import re
 import streamlit as st
 from dotenv import load_dotenv
 from pydantic import ValidationError
 
 from src.clients import APIError, JevClient, OpenRouterClient
-from src.models import Requirement
 from src.parsers import extract_resume
-from src.scoring import classify, summarize
+from src.pipeline import RubricError, build_results, parse_rubric
 
 load_dotenv()
-st.set_page_config(page_title="Resume Screener", page_icon="✓", layout="wide")
-st.title("Resume Screener")
+st.set_page_config(page_title="Talent Match", page_icon="✓", layout="wide")
+st.title("Talent Match")
 st.caption("Compare one resume with one job description. Results support human review and must not be used as an automatic hiring decision.")
 
 with st.sidebar:
@@ -54,12 +53,13 @@ rubric_text = st.text_area("Rubric (JSON)", height=340,
                            placeholder="Click Prepare requirements to generate the rubric.", key="rubric_editor")
 
 if st.button("Compare resume"):
+    st.session_state.pop("results", None)
     try:
         if not openrouter_key:
             raise ValueError("Add your OpenRouter key.")
         if not rubric_text.strip():
             raise ValueError("Prepare or enter a rubric first.")
-        requirements = [Requirement.model_validate(x) for x in json.loads(rubric_text)]
+        requirements = parse_rubric(rubric_text)
         if uploaded:
             resume = extract_resume(uploaded.name, uploaded.getvalue())
         elif pasted_resume.strip():
@@ -76,11 +76,13 @@ if st.button("Compare resume"):
             else:
                 evaluations = ai.evaluate(resume, requirements)
                 evaluator = "OpenRouter fallback"
-            results = [classify(r, e) for r, e in zip(requirements, evaluations)]
-            summary = summarize(results)
+            results, summary = build_results(requirements, evaluations)
         st.session_state.results = (results, summary, evaluator)
-    except (ValueError, json.JSONDecodeError, ValidationError, APIError) as exc:
+    except (ValueError, RubricError, ValidationError, APIError) as exc:
         st.error(f"Could not compare: {exc}")
+    except Exception:
+        logging.exception("Unexpected comparison failure")
+        st.error("Could not compare because of an unexpected response. No result was saved; check the terminal log for details.")
 
 if "results" in st.session_state:
     results, summary, evaluator = st.session_state.results
@@ -95,7 +97,8 @@ if "results" in st.session_state:
         icon = {"Match": "✅", "Needs improvement — Gaps": "⚠️", "No match": "❌"}[result.verdict]
         with st.expander(f"{icon} {result.requirement.name} — {result.verdict}"):
             st.write(f"**Importance:** {result.requirement.importance.title()}")
-            st.write(f"**JD evidence:** “{result.requirement.jd_excerpt}”")
+            source_note = "verified quote" if result.requirement.source_verified else "model-derived — verify against JD"
+            st.write(f"**JD evidence ({source_note}):** “{result.requirement.jd_excerpt}”")
             value = result.evaluation.value
             st.write(f"**Evaluation:** {value if value is not None else 'Not demonstrated'}")
             if result.evaluation.evidence.quote:
