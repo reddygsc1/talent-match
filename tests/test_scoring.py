@@ -1,3 +1,5 @@
+import pytest
+from pydantic import ValidationError
 from src.models import Evidence, Evaluation, Requirement
 from src.scoring import classify, summarize
 
@@ -34,6 +36,19 @@ def test_noul_is_probability_not_boolean():
     result = classify(requirement, Evaluation(requirement_id="depth", value=.8,
         evidence=Evidence(quote="mentored engineers", status="sufficient")))
     assert result.verdict == "Match"
+
+
+def test_score_criteria_object_is_normalized_to_ordered_list():
+    requirement = Requirement(id="years", name="Experience", jd_excerpt="5 years",
+        type="score", instructions="Rate experience", criteria={"2": "Senior", "0": "None", "1": "Some"},
+        target=2)
+    assert requirement.criteria == ["None", "Some", "Senior"]
+
+
+def test_score_target_must_be_level_index():
+    with pytest.raises(ValidationError, match="level index"):
+        Requirement(id="years", name="Experience", jd_excerpt="5 years", type="score",
+            instructions="Rate experience", criteria=["None", "Some", "Senior"], target=5)
 
 
 def test_summary_reports_coverage_separately():
