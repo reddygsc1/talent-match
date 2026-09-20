@@ -23,6 +23,20 @@ def test_requirement_source_quote_is_verified_against_jd():
     assert requirements[1].source_verified is False
 
 
+def test_all_malformed_score_criteria_are_repaired_without_aborting_rubric():
+    response = {"requirements": [{
+        "id": f"req{i}", "name": f"Requirement {i}", "jd_excerpt": f"requirement {i}",
+        "importance": "required", "type": "score", "instructions": f"Evaluate requirement {i}",
+        "criteria": "low to high", "target": None,
+    } for i in range(1, 9)]}
+    jd = ". ".join(f"requirement {i}" for i in range(1, 9))
+    requirements = StubOpenRouter(response).create_requirements(jd)
+    assert len(requirements) == 8
+    assert all(len(requirement.criteria) == 6 for requirement in requirements)
+    assert all(requirement.target == 4 for requirement in requirements)
+    assert all(requirement.rubric_repaired for requirement in requirements)
+
+
 def test_realistic_provider_string_shapes_are_accepted():
     response = {"requirements": [{
         "id": "years", "name": "Experience", "jd_excerpt": "4+ years",

@@ -1,5 +1,3 @@
-import pytest
-from pydantic import ValidationError
 from src.clients import JevClient
 from src.models import Evidence, Evaluation, Requirement
 from src.scoring import classify, summarize
@@ -89,10 +87,19 @@ def test_score_criteria_object_is_normalized_to_ordered_list():
     assert requirement.criteria == ["None", "Some", "Senior"]
 
 
-def test_score_target_must_be_level_index():
-    with pytest.raises(ValidationError, match="level index"):
-        Requirement(id="years", name="Experience", jd_excerpt="5 years", type="score",
-            instructions="Rate experience", criteria=["None", "Some", "Senior"], target=5)
+def test_invalid_score_target_is_repaired_instead_of_crashing():
+    requirement = Requirement(id="years", name="Experience", jd_excerpt="5 years", type="score",
+        instructions="Rate experience", criteria=["None", "Some", "Senior"], target=5)
+    assert requirement.target == 2
+    assert requirement.rubric_repaired is True
+
+
+def test_missing_score_criteria_gets_standard_fallback():
+    requirement = Requirement(id="depth", name="Depth", jd_excerpt="technical depth", type="score",
+        instructions="Rate technical depth", criteria="High", target=None)
+    assert len(requirement.criteria) == 6
+    assert requirement.target == 4
+    assert requirement.rubric_repaired is True
 
 
 def test_summary_reports_coverage_separately():

@@ -43,7 +43,10 @@ if st.button("Prepare requirements", type="primary"):
             with st.spinner("Preparing a job-related rubric…"):
                 requirements = OpenRouterClient(openrouter_key, model).create_requirements(jd)
             st.session_state.rubric_editor = json.dumps([r.model_dump() for r in requirements], indent=2)
+            repaired = sum(r.rubric_repaired for r in requirements)
             st.success(f"Prepared {len(requirements)} requirements. Review them before comparison.")
+            if repaired:
+                st.warning(f"Automatically repaired {repaired} malformed model-generated rubric item(s). Review their criteria and targets.")
         except (APIError, ValidationError) as exc:
             st.error(str(exc))
 
@@ -97,6 +100,8 @@ if "results" in st.session_state:
         icon = {"Match": "✅", "Needs improvement — Gaps": "⚠️", "No match": "❌"}[result.verdict]
         with st.expander(f"{icon} {result.requirement.name} — {result.verdict}"):
             st.write(f"**Importance:** {result.requirement.importance.title()}")
+            if result.requirement.rubric_repaired:
+                st.write("**Rubric note:** Automatically repaired; review the criteria and target.")
             source_note = "verified quote" if result.requirement.source_verified else "model-derived — verify against JD"
             st.write(f"**JD evidence ({source_note}):** “{result.requirement.jd_excerpt}”")
             value = result.evaluation.value
