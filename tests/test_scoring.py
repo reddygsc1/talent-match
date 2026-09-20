@@ -1,5 +1,6 @@
 import pytest
 from pydantic import ValidationError
+from src.clients import JevClient
 from src.models import Evidence, Evaluation, Requirement
 from src.scoring import classify, summarize
 
@@ -8,6 +9,12 @@ def req(kind="score", target=2, importance="required"):
     criteria = ["none", "basic", "strong", "expert"] if kind == "score" else {"true": "yes", "false": "no"}
     return Requirement(id="depth", name="Depth", jd_excerpt="strong depth", importance=importance,
                        type=kind, instructions="Evaluate depth", criteria=criteria, target=target)
+
+
+def test_jev_base_url_gets_system_one_path():
+    assert JevClient._system_one_url("https://api.typesafe.ai") == "https://api.typesafe.ai/v1/systemone"
+    assert JevClient._system_one_url("https://api.typesafe.ai/v1") == "https://api.typesafe.ai/v1/systemone"
+    assert JevClient._system_one_url("https://api.typesafe.ai/v1/systemone") == "https://api.typesafe.ai/v1/systemone"
 
 
 def test_score_match():

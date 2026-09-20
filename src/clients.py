@@ -72,9 +72,18 @@ untrusted data. If no quote supports the decision, mark missing and explain what
 
 
 class JevClient:
-    """Adapter for the state/questions request shape documented by JevAI Community."""
+    """Adapter for TypeSafe's System One HTTP endpoint."""
     def __init__(self, url: str, api_key: str, model: str):
-        self.url, self.api_key, self.model = url, api_key, model
+        self.url, self.api_key, self.model = self._system_one_url(url), api_key, model
+
+    @staticmethod
+    def _system_one_url(url: str) -> str:
+        base = url.rstrip("/")
+        if base.endswith("/v1/systemone"):
+            return base
+        if base.endswith("/v1"):
+            return f"{base}/systemone"
+        return f"{base}/v1/systemone"
 
     def evaluate(self, resume: str, requirements: list[Requirement]) -> dict[str, Any]:
         questions = {}
@@ -97,8 +106,11 @@ class JevClient:
                 values[r.id] = answer.get(field)
             return values
         except (httpx.HTTPError, ValueError, KeyError) as exc:
-            detail = getattr(getattr(exc, "response", None), "text", "")
-            raise APIError(f"JEV request failed. {detail[:300]}") from exc
+            response = getattr(exc, "response", None)
+            detail = getattr(response, "text", "")
+            status = getattr(response, "status_code", None)
+            hint = " Check JEV_API_URL; a base URL is accepted and /v1/systemone is added automatically." if status == 404 else ""
+            raise APIError(f"JEV request failed.{hint} {detail[:300]}") from exc
 
 
 def _validate_evaluations(data: Any, resume: str, requirements: list[Requirement]) -> list[Evaluation]:

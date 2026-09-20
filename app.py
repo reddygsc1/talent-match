@@ -70,7 +70,7 @@ if st.button("Compare resume"):
         ai = OpenRouterClient(openrouter_key, model)
         with st.spinner("Comparing evidence…"):
             if use_jev:
-                values = JevClient(jev_url, jev_key, os.getenv("JEV_MODEL", "typesafe/jev-1.13")).evaluate(resume, requirements)
+                values = JevClient(jev_url, jev_key, os.getenv("JEV_MODEL", "jev-latest")).evaluate(resume, requirements)
                 evaluations = ai.extract_evidence(resume, requirements, values)
                 evaluator = "JEV with OpenRouter evidence grounding"
             else:

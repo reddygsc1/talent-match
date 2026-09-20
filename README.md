@@ -10,9 +10,9 @@ It shows an overall fit score, evidence coverage, exact resume evidence, and per
 
 ## Important integration note
 
-The JEV community documentation names `typesafe/jev-1.13`, but that model was not listed in OpenRouter's catalog when this repository was created. The app therefore supports two explicit modes:
+The app supports two explicit modes:
 
-1. **JEV adapter:** enabled when `JEV_API_URL` and `JEV_API_KEY` are configured.
+1. **JEV adapter:** enabled when `JEV_API_URL` and `JEV_API_KEY` are configured. It calls TypeSafe's `/v1/systemone` endpoint and defaults to `jev-latest`.
 2. **OpenRouter fallback:** allows local MVP testing and is clearly labeled **not JEV** in the UI.
 
 OpenRouter is also used to extract the JD rubric and ground decisions in exact resume evidence.
